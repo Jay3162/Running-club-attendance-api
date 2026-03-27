@@ -22,3 +22,5 @@ Python
 FastAPI
 SQLite/PostgreSQL
 PyTest
+
+current command to run -> python -m fastapi dev main.py
