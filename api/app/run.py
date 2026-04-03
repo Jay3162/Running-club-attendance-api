@@ -7,6 +7,16 @@ router = APIRouter(prefix="/runs", tags=["run"])
 
 @router.put("/", response_model=runId)
 def update_run(run: runId):
+    print("run", run)
+    print("runner", run.dict())
+    # match the user id
+    # get the fields
+    print("id", run.id)
+    print("date", run.date)
+    # update the fields
+    updated_run = runId(**run.dict())
+    print("updated_run", updated_run)
+    # return the updated fields
     return run
 
 @router.delete("/", response_model=runId)
