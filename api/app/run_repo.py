@@ -18,6 +18,16 @@ class runCreate(BaseModel):
 class runId(runCreate):
     id: int
 
+#update
+def update_run(run: runId):
+    target_index = 0
+    for runs in runs_db:
+        if runs.id == run.id:
+            new_run = runId(**run.dict())
+            target_index = runs_db.index(runs)
+            runs_db[target_index] = new_run
+    return runs_db[target_index]
+
 #delete
 def delete_run(run_id: int):
     for run in runs_db:
