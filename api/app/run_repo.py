@@ -26,7 +26,11 @@ def update_run(run: runId):
             new_run = runId(**run.dict())
             target_index = runs_db.index(runs)
             runs_db[target_index] = new_run
-    return runs_db[target_index]
+            return runs_db[target_index]
+    raise HTTPException(
+        status_code=404,
+        detail="user not found"
+    ) 
 
 #delete
 def delete_run(run_id: int):
