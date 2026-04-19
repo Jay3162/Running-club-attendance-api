@@ -2,8 +2,26 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import date
 from typing import List
+from db import base
+import sqlite3
 
 router = APIRouter(prefix="/runs", tags=["run"])
+
+# print("db", base.get_db("user.db"))
+
+# new_runs_db = base.get_db("user.db")
+
+# print("new db", new_runs_db)
+
+# cursor = new_runs_db.cursor()
+
+# cursor.execute(
+#     """
+#     SELECT * FROM run_db
+#     """
+# )
+
+# print("all data", cursor.fetchall())
 
 #temporary state in memory
 runs_db: List["runCreate"] = []
@@ -45,24 +63,85 @@ def delete_run(run_id: int):
     )
 #post
 def create_run(run: runCreate):
-    global next_run_id
     # use the new model and set the id, the dump the existing run as a dictionary inside
-    run = runId(id=next_run_id, **run.dict())
-    runs_db.append(run)
-    next_run_id += 1
+    run = runCreate(**run.dict())
+    try: 
+        get_new_conn = base.get_db("user.db")
+        get_new_cursor = get_new_conn.cursor()
+        get_new_cursor.execute(
+            """
+            INSERT INTO run_db (user_id, date, distance) VALUES (?, ?, ?)
+            """, (run.user_id, run.date, run.distance)
+        )
+        print("my run", run)
+        # new_row = get_new_cursor.execute(
+        #     """
+        #     SELECT LAST_INSERT_ROWID();
+        #     """
+        # )
+        new_row = get_new_cursor.execute("SELECT LAST_INSERT_ROWID()")
+        new_run_id = new_row.fetchone()[0]
+    except Exception as e:
+        print(e)
+        raise e
+    finally:
+        get_new_conn.commit()
+        get_new_conn.close()
+    print("new_run_id", new_run_id)
+    new_run = runId(id=new_run_id, **run.dict())
 
-    return run
+    return new_run
 
 #get
 def get_run(run_id: int):
-    for run in runs_db:
-        if run.id == run_id:
-            return run
-    raise HTTPException(
-        status_code=404,
-        detail="user not found"
-    )
+    run = None
+    try:
+        get_new_conn = base.get_db("user.db")
+        get_new_conn.row_factory = sqlite3.Row
+        get_new_cursor = get_new_conn.cursor()
+        get_new_cursor.execute(
+            """
+            SELECT * FROM run_db WHERE id = ?
+            """, (run_id,)
+        )
+        new_id = get_new_cursor.fetchone()
+        if new_id:
+            run = dict(new_id)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="user not found"
+            )
+    except Exception as e:
+        print(e)
+        raise e
+    finally:
+        get_new_conn.close()
+    return run
+
 #simple get
 def simple_get_run():
-    return runs_db
+    result = []
+    try:
+        get_new_conn = base.get_db("user.db")
+        #ensure data that's passed back to pydantic model is acceptable
+        get_new_conn.row_factory = sqlite3.Row
+        get_all_cursor = get_new_conn.cursor()
+        get_all_cursor.execute(
+            """
+            SELECT * FROM run_db
+            """
+        )
+        all_users = get_all_cursor.fetchall()
+        print("all_users", all_users)
+        result = [dict(row) for row in all_users]
+        print("result", result)
+        
+    except Exception as e:
+        print(e)
+        raise e
+    finally: 
+        get_new_conn.close()
+    return result
+    
     

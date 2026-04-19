@@ -1,7 +1,12 @@
 import sqlite3
 
-con = sqlite3.connect("user.db")
+def get_db(db):
+    con = sqlite3.connect(db)
+    return con
 
-cursor = con.cursor()
+cursor = get_db("user.db")
 
-cursor.execute()
+db = cursor.execute("""
+                CREATE TABLE IF NOT EXISTS run_db (user_id INTEGER, date TEXT, distance INTEGER, id INTEGER PRIMARY KEY AUTOINCREMENT)
+               """
+               )
