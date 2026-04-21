@@ -6,8 +6,8 @@ from api.app import run_repo
 router = APIRouter(prefix="/runs", tags=["run"])
 
 @router.put("/", response_model=runId)
-def new_run(run: runId):
-    return run_repo.update_run(run)
+def new_run(run_id: int, run: runId):
+    return run_repo.update_run(run_id, run)
 
 @router.delete("/", response_model=runId)
 def remove_run(run_id: int):

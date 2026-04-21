@@ -7,22 +7,6 @@ import sqlite3
 
 router = APIRouter(prefix="/runs", tags=["run"])
 
-# print("db", base.get_db("user.db"))
-
-# new_runs_db = base.get_db("user.db")
-
-# print("new db", new_runs_db)
-
-# cursor = new_runs_db.cursor()
-
-# cursor.execute(
-#     """
-#     SELECT * FROM run_db
-#     """
-# )
-
-# print("all data", cursor.fetchall())
-
 #temporary state in memory
 runs_db: List["runCreate"] = []
 next_run_id = 1
@@ -37,30 +21,77 @@ class runId(runCreate):
     id: int
 
 #update
-def update_run(run: runId):
-    target_index = 0
-    for runs in runs_db:
-        if runs.id == run.id:
-            new_run = runId(**run.dict())
-            target_index = runs_db.index(runs)
-            runs_db[target_index] = new_run
-            return runs_db[target_index]
-    raise HTTPException(
-        status_code=404,
-        detail="user not found"
-    ) 
+def update_run(run_id: int, run: runId):
+    to_update = None
+    try:
+        get_new_conn = base.get_db("user.db")
+        get_new_conn.row_factory = sqlite3.Row
+        new_cursor = get_new_conn.cursor()
+        selected_id = new_cursor.execute(
+            """
+            SELECT * FROM run_db WHERE id = ?
+            """, (run_id,)
+        )
+        edit_id = dict(selected_id.fetchone())
+        print("selected", edit_id)
+        to_update = new_cursor.execute(
+            """
+            UPDATE run_db
+            SET user_id = ?, date = ?, distance = ?
+            WHERE id = ?
+            """, (run.user_id, run.date, run.distance, run_id,)
+        )
 
+        new_run = runId(**dict(run))
+
+        return new_run
+
+    except Exception as e:
+        print(e)
+        raise e
+    finally:
+        get_new_conn.commit()
+        get_new_conn.close()
+        if to_update == None:
+            raise HTTPException(
+                status_code=404,
+                detail="cannot update run that doesn't exist"
+            )
 #delete
 def delete_run(run_id: int):
-    for run in runs_db:
-        if run_id == run.id:
-            rm_val = runs_db.index(run)
-            runs_db.pop(rm_val)
-            return run
-    raise HTTPException(
-        status_code=404,
-        detail="user not found"
-    )
+    to_delete = None
+    try:
+        get_new_conn = base.get_db("user.db")
+        get_new_conn.row_factory = sqlite3.Row
+        new_cursor = get_new_conn.cursor()
+        new_cursor.execute(
+            """
+            SELECT * FROM run_db WHERE id = ?
+            """, (run_id,)
+        )
+        selected_id = new_cursor.fetchone()
+        print("selected", dict(selected_id))
+        to_delete = dict(selected_id)
+        print("dict", to_delete)
+        new_cursor.execute(
+            """
+            DELETE FROM run_db WHERE id = ?
+            """, (to_delete["id"],)
+        )
+        get_new_conn.commit()
+        return to_delete
+    
+
+    except Exception as e:
+        print(e)
+        raise e
+    finally:
+        get_new_conn.close()
+        if to_delete == None:
+            raise HTTPException(
+                status_code=404,
+                detail="cannot delete run that doesn't exist"
+            )
 #post
 def create_run(run: runCreate):
     # use the new model and set the id, the dump the existing run as a dictionary inside
@@ -81,11 +112,11 @@ def create_run(run: runCreate):
         # )
         new_row = get_new_cursor.execute("SELECT LAST_INSERT_ROWID()")
         new_run_id = new_row.fetchone()[0]
+        get_new_conn.commit()
     except Exception as e:
         print(e)
         raise e
     finally:
-        get_new_conn.commit()
         get_new_conn.close()
     print("new_run_id", new_run_id)
     new_run = runId(id=new_run_id, **run.dict())
