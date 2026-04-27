@@ -2,14 +2,16 @@ from fastapi import APIRouter
 from typing import List
 from api.app.run_repo import runCreate, runId
 from api.app import run_repo
+from db import base
+import sqlite3
 
 router = APIRouter(prefix="/runs", tags=["run"])
 
-@router.put("/", response_model=runId)
+@router.put("/{run_id}", response_model=runId)
 def new_run(run_id: int, run: runId):
     return run_repo.update_run(run_id, run)
 
-@router.delete("/", response_model=runId)
+@router.delete("/{run_id}", response_model=runId)
 def remove_run(run_id: int):
     return run_repo.delete_run(run_id)
 

@@ -20,38 +20,46 @@ class runCreate(BaseModel):
 class runId(runCreate):
     id: int
 
-#update
-def update_run(run_id: int, run: runId):
-    to_update = None
+def initialize_db():
     try:
         get_new_conn = base.get_db("user.db")
         get_new_conn.row_factory = sqlite3.Row
         new_cursor = get_new_conn.cursor()
+    except Exception as e:
+        print(e)
+        raise e
+    return new_cursor
+
+#update
+def update_run(run_id: int, run: runId):
+    to_update = None
+    try:
+        new_cursor = initialize_db()
         selected_id = new_cursor.execute(
             """
             SELECT * FROM run_db WHERE id = ?
             """, (run_id,)
         )
-        edit_id = dict(selected_id.fetchone())
-        print("selected", edit_id)
-        to_update = new_cursor.execute(
-            """
-            UPDATE run_db
-            SET user_id = ?, date = ?, distance = ?
-            WHERE id = ?
-            """, (run.user_id, run.date, run.distance, run_id,)
-        )
+        curr_id = dict(selected_id.fetchone())["id"]
+        if curr_id != None and run_id == curr_id:
+            to_update = new_cursor.execute(
+                """
+                UPDATE run_db
+                SET user_id = ?, date = ?, distance = ?
+                WHERE id = ?
+                """, (run.user_id, run.date, run.distance, run_id,)
+            )
 
-        new_run = runId(**dict(run))
+            new_run = runId(**dict(run))
+            new_cursor.connection.commit()
 
-        return new_run
+            return new_run
 
     except Exception as e:
         print(e)
         raise e
     finally:
-        get_new_conn.commit()
-        get_new_conn.close()
+        new_cursor.connection.close()
         if to_update == None:
             raise HTTPException(
                 status_code=404,
@@ -61,24 +69,22 @@ def update_run(run_id: int, run: runId):
 def delete_run(run_id: int):
     to_delete = None
     try:
-        get_new_conn = base.get_db("user.db")
-        get_new_conn.row_factory = sqlite3.Row
-        new_cursor = get_new_conn.cursor()
+        new_cursor = initialize_db()
         new_cursor.execute(
             """
             SELECT * FROM run_db WHERE id = ?
             """, (run_id,)
         )
         selected_id = new_cursor.fetchone()
-        print("selected", dict(selected_id))
+        if dict(selected_id) == None:
+            return to_delete
         to_delete = dict(selected_id)
-        print("dict", to_delete)
         new_cursor.execute(
             """
             DELETE FROM run_db WHERE id = ?
             """, (to_delete["id"],)
         )
-        get_new_conn.commit()
+        new_cursor.connection.commit()
         return to_delete
     
 
@@ -86,7 +92,7 @@ def delete_run(run_id: int):
         print(e)
         raise e
     finally:
-        get_new_conn.close()
+        new_cursor.connection.close()
         if to_delete == None:
             raise HTTPException(
                 status_code=404,
@@ -95,16 +101,16 @@ def delete_run(run_id: int):
 #post
 def create_run(run: runCreate):
     # use the new model and set the id, the dump the existing run as a dictionary inside
-    run = runCreate(**run.dict())
+    print("run", run)
+    print("run dict", dict(run))
+    run = runCreate(**dict(run))
     try: 
-        get_new_conn = base.get_db("user.db")
-        get_new_cursor = get_new_conn.cursor()
+        get_new_cursor = initialize_db()
         get_new_cursor.execute(
             """
             INSERT INTO run_db (user_id, date, distance) VALUES (?, ?, ?)
             """, (run.user_id, run.date, run.distance)
         )
-        print("my run", run)
         # new_row = get_new_cursor.execute(
         #     """
         #     SELECT LAST_INSERT_ROWID();
@@ -112,14 +118,13 @@ def create_run(run: runCreate):
         # )
         new_row = get_new_cursor.execute("SELECT LAST_INSERT_ROWID()")
         new_run_id = new_row.fetchone()[0]
-        get_new_conn.commit()
+        get_new_cursor.connection.commit()
     except Exception as e:
         print(e)
         raise e
     finally:
-        get_new_conn.close()
-    print("new_run_id", new_run_id)
-    new_run = runId(id=new_run_id, **run.dict())
+        get_new_cursor.connection.close()
+    new_run = runId(id=new_run_id, **dict(run))
 
     return new_run
 
@@ -127,9 +132,7 @@ def create_run(run: runCreate):
 def get_run(run_id: int):
     run = None
     try:
-        get_new_conn = base.get_db("user.db")
-        get_new_conn.row_factory = sqlite3.Row
-        get_new_cursor = get_new_conn.cursor()
+        get_new_cursor = initialize_db()
         get_new_cursor.execute(
             """
             SELECT * FROM run_db WHERE id = ?
@@ -147,32 +150,28 @@ def get_run(run_id: int):
         print(e)
         raise e
     finally:
-        get_new_conn.close()
+        get_new_cursor.connection.close()
     return run
 
 #simple get
 def simple_get_run():
     result = []
     try:
-        get_new_conn = base.get_db("user.db")
         #ensure data that's passed back to pydantic model is acceptable
-        get_new_conn.row_factory = sqlite3.Row
-        get_all_cursor = get_new_conn.cursor()
+        get_all_cursor = initialize_db()
         get_all_cursor.execute(
             """
             SELECT * FROM run_db
             """
         )
         all_users = get_all_cursor.fetchall()
-        print("all_users", all_users)
         result = [dict(row) for row in all_users]
-        print("result", result)
         
     except Exception as e:
         print(e)
         raise e
     finally: 
-        get_new_conn.close()
+        get_all_cursor.connection.close()
     return result
     
     
