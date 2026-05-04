@@ -8,7 +8,7 @@ import sqlite3
 router = APIRouter(prefix="/runs", tags=["run"])
 
 @router.put("/{run_id}", response_model=runId)
-def new_run(run_id: int, run: runId):
+def new_run(run_id: int, run: runCreate):
     return run_repo.update_run(run_id, run)
 
 @router.delete("/{run_id}", response_model=runId)

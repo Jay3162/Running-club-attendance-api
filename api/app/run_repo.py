@@ -31,7 +31,7 @@ def initialize_db():
     return new_cursor
 
 #update
-def update_run(run_id: int, run: runId):
+def update_run(run_id: int, run: runCreate):
     to_update = None
     try:
         new_cursor = initialize_db()
@@ -40,23 +40,29 @@ def update_run(run_id: int, run: runId):
             SELECT * FROM run_db WHERE id = ?
             """, (run_id,)
         )
+        print("selected", selected_id)
         curr_id = dict(selected_id.fetchone())["id"]
+        print("curr_id", curr_id)
+        print("run_id", run_id)
         if curr_id != None and run_id == curr_id:
-            to_update = new_cursor.execute(
+            new_cursor.execute(
                 """
                 UPDATE run_db
                 SET user_id = ?, date = ?, distance = ?
                 WHERE id = ?
                 """, (run.user_id, run.date, run.distance, run_id,)
             )
-
-            new_run = runId(**dict(run))
+            # print("new updated run", update_new_run)
+            print("to update", to_update)
+            print("the run", run)
+            new_run = runId(id=run_id, **dict(run))
+            to_update = new_run
             new_cursor.connection.commit()
 
             return new_run
 
     except Exception as e:
-        print(e)
+        print("An error has occured", e)
         raise e
     finally:
         new_cursor.connection.close()
