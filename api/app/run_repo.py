@@ -134,6 +134,27 @@ def create_run(run: runCreate):
 
     return new_run
 
+#get by user_id
+def get_by_uid(user_id: int):
+    runs = []
+    try:
+        get_new_cursor = initialize_db()
+        get_new_cursor.execute(
+            """
+            SELECT * FROM run_db WHERE user_id = ?
+            """, (user_id,)
+        )
+        user_runs = get_new_cursor.fetchall()
+        for i in range(len(user_runs)):
+            runs.append(dict(user_runs[i]))
+        print(runs, "user_id runs")
+        
+    except HTTPException as e:
+        print(e)
+    finally:
+        get_new_cursor.connection.close()
+    return runs
+
 #get
 def get_run(run_id: int):
     run = None

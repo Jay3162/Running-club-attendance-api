@@ -18,6 +18,10 @@ def remove_run(run_id: int):
 @router.post("/", response_model=runId)
 def create_run(run: runCreate):
     return run_repo.create_run(run)
+
+@router.get("/user/{user_id}", response_model=List[runId])
+def get_users_runs(user_id: int):
+    return run_repo.get_by_uid(user_id)
     
 
 @router.get("/{run_id}", response_model=runId)
